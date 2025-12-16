@@ -159,10 +159,25 @@ export default function FileList() {
               </tr>
             );
           })}
-          {!state.entries?.length && (
+          {!state.entries?.length && !state.loading && (
             <tr>
-              <td colSpan={6} className="helper" style={{ padding: 24, textAlign: "center" }}>
-                No items here yet. Drag and drop files to upload, or use the Upload button.
+              <td colSpan={6} style={{ padding: 24 }}>
+                <div className="helper" style={{ textAlign: "center" }}>
+                  <div style={{ fontWeight: 600, color: "#111827", marginBottom: 6 }}>
+                    This folder is empty or the backend is unreachable.
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    If running locally, ensure:
+                  </div>
+                  <ul style={{ textAlign: "left", margin: "0 auto", maxWidth: 520 }}>
+                    <li>Use npm start for dev (React dev server) or npm run preview to build and serve.</li>
+                    <li>The monolith server.js exposes API routes under /api on port 3000 by default.</li>
+                    <li>Override base via REACT_APP_API_BASE or REACT_APP_BACKEND_URL if backend is remote.</li>
+                  </ul>
+                  <div style={{ marginTop: 12 }}>
+                    Drag and drop files here to upload, or use the Upload button.
+                  </div>
+                </div>
               </td>
             </tr>
           )}

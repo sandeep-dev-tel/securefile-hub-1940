@@ -1,82 +1,32 @@
-# Lightweight React Template for KAVIA
+# SuperDrive Frontend (React)
 
-This project provides a minimal React template with a clean, modern UI and minimal dependencies.
+A lightweight React frontend for SuperDrive with an Ocean Professional theme (blue and amber accents), providing:
+- Auth UI
+- Directory browser with breadcrumb navigation
+- File actions: upload (drag-and-drop), download, create folder, rename, delete
+- Settings panel to view configured API URLs
+- Basic toasts and loading indicators
 
-## Features
+## Run
 
-- **Lightweight**: No heavy UI frameworks - uses only vanilla CSS and React
-- **Modern UI**: Clean, responsive design with KAVIA brand styling
-- **Fast**: Minimal dependencies for quick loading times
-- **Simple**: Easy to understand and modify
+- npm start — dev mode on http://localhost:3000
+- npm run build — production build
+- npm run preview — build then serve static build via Node server.js
 
-## Getting Started
+In monolith mode, the Node server in server.js serves the API under /api and static build in production.
 
-In the project directory, you can run:
+## Environment
 
-### `npm start`
+The app reads API endpoints from environment variables:
+- REACT_APP_API_BASE — full base URL including optional /api (client appends /api if not present)
+- REACT_APP_BACKEND_URL — alternative base when REACT_APP_API_BASE is not set
+- REACT_APP_WS_URL — optional WebSocket URL
+- REACT_APP_FRONTEND_URL — optional frontend URL reference
 
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+When unset, API calls default to same-origin /api.
 
-### `npm test`
+## Notes
 
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## Customization
-
-### Colors
-
-The main brand colors are defined as CSS variables in `src/App.css`:
-
-```css
-:root {
-  --kavia-orange: #E87A41;
-  --kavia-dark: #1A1A1A;
-  --text-color: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-}
-```
-
-### Components
-
-This template uses pure HTML/CSS components instead of a UI framework. You can find component styles in `src/App.css`. 
-
-Common components include:
-- Buttons (`.btn`, `.btn-large`)
-- Container (`.container`)
-- Navigation (`.navbar`)
-- Typography (`.title`, `.subtitle`, `.description`)
-
-## Learn More
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Upload uses multipart with field "files" (multer.array("files"))
+- All operations are restricted to the server-side configured ROOT_DIR
+- A toast system surfaces success and error notifications

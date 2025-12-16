@@ -5,7 +5,13 @@
  */
 import { getApiBaseUrl, getLogLevel } from "../utils/env";
 
-const BASE = () => getApiBaseUrl();
+// Default to same-origin API base. Ensure it includes /api prefix for all API calls.
+const BASE = () => {
+  const base = getApiBaseUrl();
+  // If base explicitly includes /api or is absolute, use as-is; otherwise append /api
+  if (!base) return "/api";
+  return base.endsWith("/api") ? base : `${base}/api`;
+};
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
 function log(...args) {
@@ -126,6 +132,7 @@ export const FilesAPI = {
     const form = new FormData();
     form.append("path", path);
     for (const file of files) form.append("files", file);
+    // Ensure multipart/form-data with field name "files" to match multer.array("files")
     return request("/files/upload", { method: "POST", body: form });
   },
   /**

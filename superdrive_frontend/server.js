@@ -160,12 +160,18 @@ const upload = multer({
   },
 });
 
+/**
+ * Healthcheck
+ * GET /api/health
+ */
+app.get("/api/health", (_req, res) => res.json({ ok: true, root: ROOT_DIR }));
+
 // Routes: Auth
 /**
- * POST /auth/login
+ * POST /api/auth/login
  * body: { username, password }
  */
-app.post("/auth/login", (req, res) => {
+app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body || {};
   const u = USERS.find((x) => x.username === username && x.password === password);
   if (!u) return res.status(401).json({ message: "Invalid credentials" });
@@ -182,9 +188,9 @@ app.post("/auth/login", (req, res) => {
 });
 
 /**
- * POST /auth/logout
+ * POST /api/auth/logout
  */
-app.post("/auth/logout", (req, res) => {
+app.post("/api/auth/logout", (req, res) => {
   const token = req.cookies?.[SESSION_COOKIE];
   if (token) destroySession(token);
   res.clearCookie(SESSION_COOKIE, { path: "/" });
@@ -192,9 +198,9 @@ app.post("/auth/logout", (req, res) => {
 });
 
 /**
- * GET /auth/me
+ * GET /api/auth/me
  */
-app.get("/auth/me", (req, res) => {
+app.get("/api/auth/me", (req, res) => {
   const s = getSession(req);
   if (!s) return res.status(401).json({ message: "Unauthorized" });
   return res.json({ username: s.username });
@@ -254,10 +260,10 @@ async function buildTree(startPath, depth = 2, relBase = "/") {
 
 // Routes: Files
 /**
- * GET /files?path=/sub/dir
+ * GET /api/files?path=/sub/dir
  * Response: { entries:[...], tree:[...] }
  */
-app.get("/files", requireAuth, async (req, res) => {
+app.get("/api/files", requireAuth, async (req, res) => {
   try {
     const reqPath = req.query.path || "/";
     const full = resolveUnderRoot(reqPath);
@@ -277,10 +283,10 @@ app.get("/files", requireAuth, async (req, res) => {
 });
 
 /**
- * POST /dirs { path, name }
+ * POST /api/dirs { path, name }
  * Creates a directory under given path
  */
-app.post("/dirs", requireAuth, async (req, res) => {
+app.post("/api/dirs", requireAuth, async (req, res) => {
   try {
     const { path: basePath = "/", name } = req.body || {};
     const safe = sanitizeName(name);
@@ -297,18 +303,18 @@ app.post("/dirs", requireAuth, async (req, res) => {
 });
 
 /**
- * POST /files/upload multipart form: fields { path }, files "files"
+ * POST /api/files/upload multipart form: fields { path }, files "files"
  */
-app.post("/files/upload", requireAuth, upload.array("files"), async (req, res) => {
+app.post("/api/files/upload", requireAuth, upload.array("files"), async (req, res) => {
   // multer already wrote files within ROOT_DIR
   return res.json({ ok: true, uploaded: (req.files || []).map((f) => ({ name: f.originalname, size: f.size })) });
 });
 
 /**
- * GET /files/download?path=/a/b.txt
+ * GET /api/files/download?path=/a/b.txt
  * Streams the file to client
  */
-app.get("/files/download", requireAuth, async (req, res) => {
+app.get("/api/files/download", requireAuth, async (req, res) => {
   try {
     const reqPath = req.query.path || "/";
     const full = resolveUnderRoot(reqPath);
@@ -327,9 +333,9 @@ app.get("/files/download", requireAuth, async (req, res) => {
 });
 
 /**
- * POST /files/rename { path, newName }
+ * POST /api/files/rename { path, newName }
  */
-app.post("/files/rename", requireAuth, async (req, res) => {
+app.post("/api/files/rename", requireAuth, async (req, res) => {
   try {
     const { path: targetPath, newName } = req.body || {};
     if (!targetPath) return res.status(400).json({ message: "Missing path" });
@@ -350,10 +356,10 @@ app.post("/files/rename", requireAuth, async (req, res) => {
 });
 
 /**
- * POST /files/move { from, to }
+ * POST /api/files/move { from, to }
  * 'to' is a directory path under root to move into (keeps original name)
  */
-app.post("/files/move", requireAuth, async (req, res) => {
+app.post("/api/files/move", requireAuth, async (req, res) => {
   try {
     const { from, to } = req.body || {};
     if (!from || !to) return res.status(400).json({ message: "Missing from/to" });
@@ -375,9 +381,9 @@ app.post("/files/move", requireAuth, async (req, res) => {
 });
 
 /**
- * POST /files/delete { path }
+ * POST /api/files/delete { path }
  */
-app.post("/files/delete", requireAuth, async (req, res) => {
+app.post("/api/files/delete", requireAuth, async (req, res) => {
   try {
     const { path: targetPath } = req.body || {};
     if (!targetPath) return res.status(400).json({ message: "Missing path" });
@@ -397,17 +403,19 @@ app.post("/files/delete", requireAuth, async (req, res) => {
   }
 });
 
-// Healthcheck
+/**
+ * Legacy healthcheck compatibility: keep old path if provided
+ */
 app.get(process.env.REACT_APP_HEALTHCHECK_PATH || "/health", (_req, res) => res.json({ ok: true, root: ROOT_DIR }));
 
 // Static serving: in production, serve build
 const buildDir = path.join(__dirname, "build");
 if (fs.existsSync(buildDir)) {
+  // Serve static assets first
   app.use(express.static(buildDir, { index: false, maxAge: "1h", setHeaders: (res) => res.setHeader("Cache-Control", "public, max-age=3600") }));
-  // SPA fallback
+  // SPA fallback - ensure API routes (/api) are not shadowed
   app.get("*", (req, res, next) => {
-    // Avoid catching API routes
-    if (req.path.startsWith("/auth") || req.path.startsWith("/files")) return next();
+    if (req.path.startsWith("/api")) return next();
     res.sendFile(path.join(buildDir, "index.html"));
   });
 }

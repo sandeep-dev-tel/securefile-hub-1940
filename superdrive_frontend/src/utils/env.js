@@ -6,23 +6,28 @@ const get = (key, fallback = undefined) => {
 // PUBLIC_INTERFACE
 export function getApiBaseUrl() {
   /**
-   * Resolve API base URL. In monolith mode, default is same-origin "".
-   * You can still override with REACT_APP_API_BASE or REACT_APP_BACKEND_URL if needed.
+   * Resolve API base URL.
+   * In monolith mode (node server.js), default is same-origin "" and the client
+   * will automatically append "/api" when building request URLs.
+   *
+   * You can override with:
+   * - REACT_APP_API_BASE (e.g., "https://example.com/api") which the client will use as-is
+   * - REACT_APP_BACKEND_URL (e.g., "https://example.com") and the client will append "/api"
    */
   const base = get("REACT_APP_API_BASE") || get("REACT_APP_BACKEND_URL") || "";
-  return (base || "").replace(/\/+$/, "");
+  return (base || "").replace(/\/*$/, "");
 }
 
 // PUBLIC_INTERFACE
 export function getFrontendUrl() {
   /** Return configured frontend URL if available. */
-  return (get("REACT_APP_FRONTEND_URL") || "").replace(/\/+$/, "");
+  return (get("REACT_APP_FRONTEND_URL") || "").replace(/\/*$/, "");
 }
 
 // PUBLIC_INTERFACE
 export function getWsUrl() {
   /** Return configured websocket URL if available. */
-  return (get("REACT_APP_WS_URL") || "").replace(/\/+$/, "");
+  return (get("REACT_APP_WS_URL") || "").replace(/\/*$/, "");
 }
 
 // PUBLIC_INTERFACE

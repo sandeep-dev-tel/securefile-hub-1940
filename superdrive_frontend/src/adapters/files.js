@@ -68,7 +68,9 @@ function assertValidName(name) {
 
 async function entryExistsAt(parentPath, name) {
   const { normalizePath } = pathHelpers();
-  const targetPath = (parentPath === "/" ? "" : normalizePath(parentPath)) + "/" + name;
+  const p = normalizePath(parentPath);
+  const safeName = String(name || "").trim();
+  const targetPath = (p === "/" ? "" : p) + "/" + safeName;
   const existing = await getEntry(targetPath.replace(/\/+/g, "/"));
   return !!existing;
 }
@@ -113,24 +115,33 @@ export class OfflineFilesAdapter extends FilesAdapter {
   async list(path = "/") {
     const { normalizePath } = pathHelpers();
     const p = normalizePath(path);
-    // ensure directory exists; if not, return empty entries but still build tree
     const dir = await getEntry(p);
     if (!dir) {
       if (p !== "/") throw new Error("Path not found");
-      // seed ensures root exists
     } else if (dir.type !== "dir") {
       throw new Error("Path is not a directory");
     }
     const entries = await listByParentPath(p);
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    // map modifiedAt to modified for UI table compatibility
+    const mapped = safeEntries.map((e) => ({
+      ...e,
+      modified: e.modifiedAt != null ? e.modifiedAt : e.modified,
+    }));
     const tree = await listAllDirs(3);
-    return { entries, tree };
+    const safeTree = Array.isArray(tree) ? tree : [];
+    return { entries: mapped, tree: safeTree };
   }
 
   async createFolder(path, name) {
     const { normalizePath } = pathHelpers();
     const p = normalizePath(path);
     const safe = assertValidName(name);
-    if (await entryExistsAt(p, safe)) throw new Error("A file or folder with that name already exists");
+    if (await entryExistsAt(p, safe)) {
+      const err = new Error("A file or folder with that name already exists");
+      err.code = "EEXIST";
+      throw err;
+    }
     const now = Date.now();
     const newPath = (p === "/" ? "" : p) + "/" + safe;
     const entry = {
@@ -143,7 +154,7 @@ export class OfflineFilesAdapter extends FilesAdapter {
       modifiedAt: now,
     };
     await putEntry(entry);
-    return true;
+    return { created: true, entry };
   }
 
   async rename(path, newName) {

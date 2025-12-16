@@ -145,12 +145,21 @@ export function AppProvider({ children, bus }) {
         }
       },
       async createFolder(name) {
+        const trimmed = String(name || "").trim();
+        if (!trimmed) {
+          setError("Invalid folder name");
+          return;
+        }
         setLoading(true);
         try {
-          await files.createFolder(state.currentPath, name);
-          notify(`Folder "${name}" created`);
-          await actions.refresh();
+          const res = await files.createFolder(state.currentPath, trimmed);
+          if (res && res.created) {
+            notify(`Folder "${trimmed}" created`);
+          }
+          // Always refresh current path to repopulate entries and tree
+          await actions.refresh(state.currentPath);
         } catch (e) {
+          // Avoid success toast on duplicate; surface error message
           setError(e.message || "Failed to create folder");
         } finally {
           setLoading(false);

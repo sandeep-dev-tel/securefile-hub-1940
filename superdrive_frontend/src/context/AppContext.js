@@ -3,6 +3,7 @@ import { AuthAPI, FilesAPI } from "../api/client";
 
 // Feature flag helper
 function isGuestEnabled() {
+  // Absence of feature flags must not disable guest login; default to enabled.
   const flags = process.env.REACT_APP_FEATURE_FLAGS || "";
   if (!flags) return true; // enable by default when not present
   return flags.split(",").map((s) => s.trim()).includes("guest-login");

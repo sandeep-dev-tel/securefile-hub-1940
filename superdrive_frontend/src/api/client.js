@@ -152,7 +152,9 @@ export const FilesAPI = {
 
 // PUBLIC_INTERFACE
 export function isGuestLoginEnabled() {
-  /** Helper to check guest login feature flag. */
+  /** Helper to check guest login feature flag.
+   * Absence of REACT_APP_FEATURE_FLAGS should default to enabled (true).
+   */
   const flags = process.env.REACT_APP_FEATURE_FLAGS || "";
   if (!flags) return true;
   return flags.split(",").map((s) => s.trim()).includes("guest-login");

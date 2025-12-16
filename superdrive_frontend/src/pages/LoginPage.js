@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useApp } from "../context/AppContext";
 
 // PUBLIC_INTERFACE
@@ -9,12 +9,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  // Feature flag gating: enable by default unless REACT_APP_FEATURE_FLAGS excludes guest-login
-  const guestEnabled = useMemo(() => {
-    const flags = process.env.REACT_APP_FEATURE_FLAGS || "";
-    if (!flags) return true;
-    return flags.split(",").map((s) => s.trim()).includes("guest-login");
-  }, []);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -75,24 +69,20 @@ export default function LoginPage() {
           >
             Clear
           </button>
-          {guestEnabled && (
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => actions.loginAsGuest()}
-              aria-label="Continue as Guest"
-              title="Continue as Guest"
-            >
-              🚀 Continue as Guest
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => actions.loginAsGuest()}
+            aria-label="Continue as Guest"
+            title="Continue as Guest"
+          >
+            🚀 Continue as Guest
+          </button>
         </div>
 
-        {guestEnabled && (
-          <div className="helper" style={{ marginTop: 12 }}>
-            Guest mode grants access to all features without an account. Your session is stored locally and can be cleared by logging out.
-          </div>
-        )}
+        <div className="helper" style={{ marginTop: 12 }}>
+          Using Guest mode grants full access.
+        </div>
         <div className="helper" style={{ marginTop: 12 }}>
           Notes:
           <ul>

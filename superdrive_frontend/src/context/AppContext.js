@@ -252,6 +252,23 @@ export function AppProvider({ children, bus }) {
 
   useEffect(() => {
     actions.init();
+    // After initialization completes, attempt to create a '/test' folder once.
+    // This uses the existing adapter logic and refresh to ensure visibility in listing and sidebar.
+    (async () => {
+      try {
+        // Wait a tick for init state updates
+        await new Promise((r) => setTimeout(r, 0));
+        // Only run if we're at root to match requested behavior
+        // Attempt to create, ignore if it already exists
+        if ((state.currentPath || "/") === "/") {
+          await actions.createFolder("test");
+          // Ensure current path is refreshed so UI updates immediately
+          await actions.refresh("/");
+        }
+      } catch {
+        // ignore any error to avoid breaking startup
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // init on mount
 

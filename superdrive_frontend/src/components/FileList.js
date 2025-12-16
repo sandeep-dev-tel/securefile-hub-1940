@@ -75,6 +75,13 @@ export default function FileList() {
     actions.setSelected(next);
   };
 
+  // Defensive copy and sort here as well in case callers mutate state elsewhere
+  const entries = Array.isArray(state.entries) ? state.entries.slice() : [];
+  entries.sort((a, b) => {
+    if ((a?.type) !== (b?.type)) return a?.type === "dir" ? -1 : 1;
+    return String(a?.name || "").localeCompare(String(b?.name || ""));
+  });
+
   return (
     <div className="panel" onDrop={onDrop} onDragOver={onDragOver}>
       <div className="toolbar">
@@ -110,7 +117,7 @@ export default function FileList() {
           </tr>
         </thead>
         <tbody>
-          {state.entries?.map((e) => {
+          {entries.map((e) => {
             const isSelected = state.selected?.has(e.name);
             return (
               <tr
@@ -160,7 +167,7 @@ export default function FileList() {
               </tr>
             );
           })}
-          {!state.entries?.length && !state.loading && (
+          {!entries.length && !state.loading && (
             <tr>
               <td colSpan={6} style={{ padding: 24 }}>
                 <div className="helper" style={{ textAlign: "center" }}>

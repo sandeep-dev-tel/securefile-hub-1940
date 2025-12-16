@@ -61,6 +61,15 @@ export default function SettingsPanel({ onClose }) {
             Close
           </button>
           <button
+            className="btn"
+            onClick={async () => {
+              await actions.refresh("/");
+            }}
+            title="Re-scan and reload current directory view"
+          >
+            🔄 Rescan
+          </button>
+          <button
             className="btn secondary"
             onClick={async () => {
               if (window.confirm("This will clear your local files and session. Continue?")) {

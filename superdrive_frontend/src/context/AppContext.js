@@ -77,6 +77,15 @@ export function AppProvider({ children, bus }) {
     }
   };
 
+  const sortEntries = (arr) => {
+    const list = Array.isArray(arr) ? arr.slice() : [];
+    list.sort((a, b) => {
+      if ((a?.type) !== (b?.type)) return a?.type === "dir" ? -1 : 1;
+      return String(a?.name || "").localeCompare(String(b?.name || ""));
+    });
+    return list;
+  };
+
   const actions = useMemo(
     () => ({
       async init() {
@@ -136,8 +145,10 @@ export function AppProvider({ children, bus }) {
         setLoading(true);
         try {
           const data = await files.list(target);
-          setEntries(data.entries || []);
-          setTree(data.tree || []);
+          // Coerce arrays and apply stable sort
+          setEntries(sortEntries(data.entries));
+          const tree = Array.isArray(data.tree) ? data.tree : [];
+          setTree(tree);
         } catch (e) {
           setError(e.message || "Failed to load");
         } finally {
@@ -159,7 +170,7 @@ export function AppProvider({ children, bus }) {
           // Always refresh current path to repopulate entries and tree
           await actions.refresh(state.currentPath);
         } catch (e) {
-          // Avoid success toast on duplicate; surface error message
+          // Avoid success toast on duplicate; surface error message only
           setError(e.message || "Failed to create folder");
         } finally {
           setLoading(false);
@@ -252,23 +263,9 @@ export function AppProvider({ children, bus }) {
 
   useEffect(() => {
     actions.init();
-    // After initialization completes, attempt to create a '/test' folder once.
-    // This uses the existing adapter logic and refresh to ensure visibility in listing and sidebar.
-    (async () => {
-      try {
-        // Wait a tick for init state updates
-        await new Promise((r) => setTimeout(r, 0));
-        // Only run if we're at root to match requested behavior
-        // Attempt to create, ignore if it already exists
-        if ((state.currentPath || "/") === "/") {
-          await actions.createFolder("test");
-          // Ensure current path is refreshed so UI updates immediately
-          await actions.refresh("/");
-        }
-      } catch {
-        // ignore any error to avoid breaking startup
-      }
-    })();
+    // Removed any one-time automatic '/test' folder creation to avoid masking issues
+    // and to ensure startup is deterministic. Users can create folders via UI,
+    // and Settings panel provides a Rescan action.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // init on mount
 

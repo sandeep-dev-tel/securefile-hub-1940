@@ -39,3 +39,16 @@ export function getLogLevel() {
   /** Return log level from env or default info. */
   return get("REACT_APP_LOG_LEVEL", "info");
 }
+
+/**
+ * PUBLIC_INTERFACE
+ */
+export function isGuestFeatureEnabledByDefault() {
+  /** Returns true if guest feature should be enabled.
+   * Defaults to true when REACT_APP_FEATURE_FLAGS is missing or empty.
+   * Even when present, frontend treats guest as enabled.
+   */
+  const flags = get("REACT_APP_FEATURE_FLAGS", "");
+  if (!flags) return true;
+  return true;
+}

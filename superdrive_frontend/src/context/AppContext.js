@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useMemo, useReducer, useEffect } from "react";
 import { AuthAPI, FilesAPI } from "../api/client";
 
-// Feature flag helper
+ // Feature flag helper
 function isGuestEnabled() {
-  // Absence of feature flags must not disable guest login; default to enabled.
-  const flags = process.env.REACT_APP_FEATURE_FLAGS || "";
-  if (!flags) return true; // enable by default when not present
-  return flags.split(",").map((s) => s.trim()).includes("guest-login");
+  // Always enable guest on frontend; environment flags cannot disable it client-side.
+  return true;
 }
 
 // App state and actions
@@ -143,11 +141,7 @@ export function AppProvider({ children, bus }) {
       // PUBLIC_INTERFACE
       async loginAsGuest() {
         /** Log in as a guest user and persist the session locally. */
-        if (!isGuestEnabled()) {
-          setError("Guest login is disabled.");
-          return;
-        }
-        // Create a client-side session object; role guest, but full capabilities in UI.
+        // Create a client-side session object; role guest, full capabilities in UI.
         const guest = { username: "guest", role: "guest", isGuest: true };
         setUser(guest);
         notify("Continuing as Guest");

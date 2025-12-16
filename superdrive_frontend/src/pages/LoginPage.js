@@ -81,7 +81,7 @@ export default function LoginPage() {
         </div>
 
         <div className="helper" style={{ marginTop: 12 }}>
-          Using Guest mode grants full access.
+          Guest mode is always available on this client.
         </div>
         <div className="helper" style={{ marginTop: 12 }}>
           Notes:

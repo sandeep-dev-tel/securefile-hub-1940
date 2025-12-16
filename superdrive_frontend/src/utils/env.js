@@ -6,11 +6,11 @@ const get = (key, fallback = undefined) => {
 // PUBLIC_INTERFACE
 export function getApiBaseUrl() {
   /**
-   * Resolve API base URL using provided environment variables.
-   * Priority: REACT_APP_API_BASE -> REACT_APP_BACKEND_URL
+   * Resolve API base URL. In monolith mode, default is same-origin "".
+   * You can still override with REACT_APP_API_BASE or REACT_APP_BACKEND_URL if needed.
    */
   const base = get("REACT_APP_API_BASE") || get("REACT_APP_BACKEND_URL") || "";
-  return base.replace(/\/+$/, "");
+  return (base || "").replace(/\/+$/, "");
 }
 
 // PUBLIC_INTERFACE

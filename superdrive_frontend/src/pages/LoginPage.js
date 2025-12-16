@@ -71,7 +71,7 @@ export default function LoginPage() {
           </button>
         </div>
         <div className="helper" style={{ marginTop: 12 }}>
-          Note: API base is configured via REACT_APP_API_BASE or REACT_APP_BACKEND_URL environment variables.
+          Note: In monolith mode, APIs are same-origin. You can override base via REACT_APP_API_BASE if needed.
         </div>
       </form>
     </div>

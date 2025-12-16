@@ -1,0 +1,2 @@
+# Storage root directory for SuperDrive files.
+# You can override location via ROOT_DIR environment variable.

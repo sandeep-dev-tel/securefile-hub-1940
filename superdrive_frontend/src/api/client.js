@@ -1,7 +1,7 @@
 /**
  * Simple API client using fetch with JSON parsing and error handling.
  * All methods read base URL from env using utils/env.js.
- * Backend endpoints are placeholders; replace paths as needed.
+ * In monolith mode, base URL is same-origin (empty string) so paths hit local Node server.
  */
 import { getApiBaseUrl, getLogLevel } from "../utils/env";
 

@@ -240,18 +240,22 @@ export class OfflineFilesAdapter extends FilesAdapter {
   }
 
   async upload(path, files) {
+    // Normalize inputs early to avoid inconsistent keys and ensure parent path correctness.
     const { normalizePath } = pathHelpers();
     const dirPath = normalizePath(path);
     const dir = await getEntry(dirPath);
     if (!dir || dir.type !== "dir") throw new Error("Destination is not a directory");
 
+    // Pre-validate names to fail fast before any writes.
     for (const f of files) {
       const name = assertValidName(f.name || "upload");
       if (await entryExistsAt(dirPath, name)) {
         throw new Error(`Name conflict: ${name} already exists`);
       }
     }
+
     const now = Date.now();
+    // Sequentially store entries and blobs to keep transactions brief and avoid open handles.
     for (const f of files) {
       const name = assertValidName(f.name || "upload");
       const full = (dirPath === "/" ? "" : dirPath) + "/" + name;
@@ -265,9 +269,13 @@ export class OfflineFilesAdapter extends FilesAdapter {
         size: blob.size,
         modifiedAt: now,
       };
-      await putEntry(entry);
-      await putFileBlob(full, blob);
+      await putEntry(entry);      // separate short tx
+      await putFileBlob(full, blob); // separate short tx
     }
+
+    // Allow UI to yield before refresh to avoid any potential re-render lockups in some browsers
+    await Promise.resolve();
+
     return true;
   }
 

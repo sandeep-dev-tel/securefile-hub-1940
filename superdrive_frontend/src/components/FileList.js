@@ -192,8 +192,8 @@ export default function FileList() {
       </table>
 
       {state.loading && (
-        <div className="helper" style={{ padding: 12 }}>
-          Loading...
+        <div className="helper" style={{ padding: 8, opacity: 0.8 }}>
+          Updating list...
         </div>
       )}
       {state.error && (

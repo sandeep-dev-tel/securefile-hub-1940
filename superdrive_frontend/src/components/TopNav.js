@@ -20,6 +20,24 @@ export default function TopNav() {
           <span className="badge" style={{ marginLeft: 8 }} title="Files are stored locally in your browser">Offline</span>
         </div>
         <div className="topnav-actions">
+          {state.loading && (
+            <span className="helper" aria-live="polite" title="Background work in progress">
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  marginRight: 6,
+                  background:
+                    "radial-gradient(circle at 30% 30%, #93C5FD, #2563EB)",
+                  animation: "sd-pulse 1s ease-in-out infinite"
+                }}
+              />
+              Working...
+            </span>
+          )}
           <button
             className="btn ghost"
             onClick={() => setShowSettings(true)}
@@ -38,6 +56,14 @@ export default function TopNav() {
         </div>
       </div>
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      <style>{`
+        @keyframes sd-pulse {
+          0% { transform: scale(0.9); opacity: 0.6; }
+          50% { transform: scale(1.05); opacity: 1; }
+          100% { transform: scale(0.9); opacity: 0.6; }
+        }
+      `}</style>
     </>
   );
 }

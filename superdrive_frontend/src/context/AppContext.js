@@ -140,11 +140,22 @@ export function AppProvider({ children, bus }) {
         }
       },
       async refresh(path) {
-        if (path) setPath(path);
-        const target = path || state.currentPath || "/";
+        const { pathHelpers } = await import("../adapters/indexeddb");
+        const { normalizePath } = pathHelpers();
+        const normalized = normalizePath(path || state.currentPath || "/");
+        if (path) setPath(normalized);
+
         setLoading(true);
+        let cleared = false;
+        const guard = setTimeout(() => {
+          if (!cleared) {
+            // Non-blocking progress hint; state.loading indicator is visible in TopNav
+            if (bus) bus.dispatchEvent(new CustomEvent("toast", { detail: { type: "success", message: "Refreshing..." } }));
+          }
+        }, 1200);
+
         try {
-          const data = await files.list(target);
+          const data = await files.list(normalized);
           // Coerce arrays and apply stable sort
           setEntries(sortEntries(data.entries));
           const tree = Array.isArray(data.tree) ? data.tree : [];
@@ -152,6 +163,8 @@ export function AppProvider({ children, bus }) {
         } catch (e) {
           setError(e.message || "Failed to load");
         } finally {
+          cleared = true;
+          clearTimeout(guard);
           setLoading(false);
         }
       },
@@ -205,15 +218,28 @@ export function AppProvider({ children, bus }) {
           return;
         }
 
+        const { pathHelpers } = await import("../adapters/indexeddb");
+        const { normalizePath } = pathHelpers();
+        const targetPath = normalizePath(state.currentPath || "/");
+
         setLoading(true);
+        let cleared = false;
+        const guard = setTimeout(() => {
+          if (!cleared && bus) {
+            bus.dispatchEvent(new CustomEvent("toast", { detail: { type: "success", message: "Uploading..." } }));
+          }
+        }, 1200);
+
         try {
-          await files.upload(state.currentPath, arr);
+          await files.upload(targetPath, arr);
           notify(`Uploaded ${arr.length} file(s)`);
           // Refresh current path to show newly uploaded files immediately
-          await actions.refresh();
+          await actions.refresh(targetPath);
         } catch (e) {
           setError(e.message || "Upload failed");
         } finally {
+          cleared = true;
+          clearTimeout(guard);
           setLoading(false);
         }
       },

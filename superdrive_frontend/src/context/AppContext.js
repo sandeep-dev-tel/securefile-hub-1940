@@ -1,11 +1,6 @@
 import React, { createContext, useContext, useMemo, useReducer, useEffect } from "react";
-import { AuthAPI, FilesAPI } from "../api/client";
-
- // Feature flag helper
-function isGuestEnabled() {
-  // Always enable guest on frontend; environment flags cannot disable it client-side.
-  return true;
-}
+import { OfflineAuthAdapter } from "../adapters/auth";
+import { OfflineFilesAdapter } from "../adapters/files";
 
 // App state and actions
 const initialState = {
@@ -49,36 +44,13 @@ export function useApp() {
   return ctx;
 }
 
-function persistAuth(user) {
-  try {
-    if (user) {
-      localStorage.setItem("sd_auth_user", JSON.stringify(user));
-      localStorage.setItem("sd_last_user", user.username || user.name || "");
-    } else {
-      localStorage.removeItem("sd_auth_user");
-      localStorage.removeItem("sd_last_user");
-    }
-  } catch {
-    // ignore storage unavailability
-  }
-}
-
-function restoreAuth() {
-  try {
-    const raw = localStorage.getItem("sd_auth_user");
-    if (!raw) return null;
-    const u = JSON.parse(raw);
-    if (!u || typeof u !== "object") return null;
-    return u;
-  } catch {
-    return null;
-  }
-}
-
 // PUBLIC_INTERFACE
 export function AppProvider({ children, bus }) {
-  /** Provider that manages global app state, auth, and file listing. */
+  /** Provider that manages global app state, auth, and file listing using offline adapters. */
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  const auth = useMemo(() => new OfflineAuthAdapter(), []);
+  const files = useMemo(() => new OfflineFilesAdapter(), []);
 
   const setLoading = (v) => dispatch({ type: "SET_LOADING", payload: v });
   const setError = (e) => {
@@ -89,7 +61,10 @@ export function AppProvider({ children, bus }) {
   };
   const setUser = (u) => {
     dispatch({ type: "SET_USER", payload: u });
-    persistAuth(u);
+    try {
+      if (u) localStorage.setItem("sd_auth_user", JSON.stringify(u));
+      else localStorage.removeItem("sd_auth_user");
+    } catch {}
   };
   const setPath = (p) => dispatch({ type: "SET_PATH", payload: p });
   const setEntries = (list) => dispatch({ type: "SET_ENTRIES", payload: list });
@@ -107,17 +82,17 @@ export function AppProvider({ children, bus }) {
       async init() {
         setLoading(true);
         try {
-          // Attempt restore from localStorage (guest or normal)
-          const restored = restoreAuth();
-          if (restored?.isGuest) {
-            setUser(restored);
-          } else {
-            const me = await AuthAPI.me().catch(() => null);
-            if (me) setUser(me);
+          await files.init();
+          const restored = await auth.init();
+          if (restored) setUser(restored);
+          else {
+            // Default to guest mode automatically
+            const guest = await auth.loginAsGuest();
+            setUser(guest);
           }
-          await actions.refresh();
-        } catch {
-          // ignore initial errors; user may need to login
+          await actions.refresh("/");
+        } catch (e) {
+          setError(e?.message || "Initialization failed");
         } finally {
           setLoading(false);
         }
@@ -125,9 +100,8 @@ export function AppProvider({ children, bus }) {
       async login(username, password) {
         setLoading(true);
         try {
-          await AuthAPI.login({ username, password });
-          const me = await AuthAPI.me().catch(() => ({ username }));
-          setUser(me);
+          const u = await auth.login(username, password);
+          setUser(u);
           notify("Signed in");
           await actions.refresh("/");
         } catch (e) {
@@ -141,8 +115,7 @@ export function AppProvider({ children, bus }) {
       // PUBLIC_INTERFACE
       async loginAsGuest() {
         /** Log in as a guest user and persist the session locally. */
-        // Create a client-side session object; role guest, full capabilities in UI.
-        const guest = { username: "guest", role: "guest", isGuest: true };
+        const guest = await auth.loginAsGuest();
         setUser(guest);
         notify("Continuing as Guest");
         await actions.refresh("/");
@@ -150,13 +123,8 @@ export function AppProvider({ children, bus }) {
       async logout() {
         setLoading(true);
         try {
-          if (state.user?.isGuest) {
-            // Client-side only logout for guest
-            notify("Signed out", "success");
-          } else {
-            await AuthAPI.logout();
-            notify("Signed out", "success");
-          }
+          await auth.logout();
+          notify("Signed out", "success");
         } finally {
           setUser(null);
           setLoading(false);
@@ -167,7 +135,7 @@ export function AppProvider({ children, bus }) {
         const target = path || state.currentPath || "/";
         setLoading(true);
         try {
-          const data = await FilesAPI.list(target);
+          const data = await files.list(target);
           setEntries(data.entries || []);
           setTree(data.tree || []);
         } catch (e) {
@@ -179,7 +147,7 @@ export function AppProvider({ children, bus }) {
       async createFolder(name) {
         setLoading(true);
         try {
-          await FilesAPI.createDir(state.currentPath, name);
+          await files.createFolder(state.currentPath, name);
           notify(`Folder "${name}" created`);
           await actions.refresh();
         } catch (e) {
@@ -188,11 +156,11 @@ export function AppProvider({ children, bus }) {
           setLoading(false);
         }
       },
-      async upload(files) {
+      async upload(fileList) {
         setLoading(true);
         try {
-          await FilesAPI.upload(state.currentPath, files);
-          notify(`Uploaded ${files.length} file(s)`);
+          await files.upload(state.currentPath, fileList);
+          notify(`Uploaded ${fileList.length} file(s)`);
           await actions.refresh();
         } catch (e) {
           setError(e.message || "Upload failed");
@@ -202,8 +170,7 @@ export function AppProvider({ children, bus }) {
       },
       async download(path) {
         try {
-          const res = await FilesAPI.download(path);
-          const blob = await res.blob();
+          const blob = await files.download(path);
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement("a");
           const name = path.split("/").pop();
@@ -219,7 +186,7 @@ export function AppProvider({ children, bus }) {
       async remove(path) {
         setLoading(true);
         try {
-          await FilesAPI.remove(path);
+          await files.remove(path);
           notify("Deleted");
           await actions.refresh();
         } catch (e) {
@@ -231,7 +198,7 @@ export function AppProvider({ children, bus }) {
       async rename(path, newName) {
         setLoading(true);
         try {
-          await FilesAPI.rename(path, newName);
+          await files.rename(path, newName);
           notify("Renamed");
           await actions.refresh();
         } catch (e) {
@@ -243,13 +210,28 @@ export function AppProvider({ children, bus }) {
       async move(from, to) {
         setLoading(true);
         try {
-          await FilesAPI.move(from, to);
+          await files.move(from, to);
           notify("Moved");
           await actions.refresh();
         } catch (e) {
           setError(e.message || "Move failed");
         } finally {
           setLoading(false);
+        }
+      },
+      async clearLocalData() {
+        // Clears all local IndexedDB + localStorage app keys and reloads state
+        try {
+          const { resetDB } = await import("../adapters/indexeddb");
+          await resetDB();
+          localStorage.removeItem("sd_auth_user");
+          localStorage.removeItem("sd_last_user");
+          notify("Local data cleared");
+        } catch (e) {
+          setError(e.message || "Failed to clear data");
+        } finally {
+          // force reinit
+          await actions.init();
         }
       },
       setSelected,

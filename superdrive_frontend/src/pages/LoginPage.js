@@ -81,14 +81,7 @@ export default function LoginPage() {
         </div>
 
         <div className="helper" style={{ marginTop: 12 }}>
-          Guest mode is always available on this client.
-        </div>
-        <div className="helper" style={{ marginTop: 12 }}>
-          Notes:
-          <ul>
-            <li>In monolith mode, APIs are same-origin under /api. Override base via REACT_APP_API_BASE or REACT_APP_BACKEND_URL if remote.</li>
-            <li>Default credentials are admin/admin unless overridden on the server (SUPERDRIVE_USERS or USERS_JSON).</li>
-          </ul>
+          Guest mode is always available. In Offline Mode, accounts can be provided via REACT_APP_SUPERDRIVE_USERS at build time.
         </div>
       </form>
     </div>

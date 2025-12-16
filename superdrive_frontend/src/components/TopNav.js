@@ -17,6 +17,7 @@ export default function TopNav() {
           <div className="logo" aria-hidden>SD</div>
           <div>SuperDrive</div>
           <span className="badge" style={{ marginLeft: 8 }}>Ocean Professional</span>
+          <span className="badge" style={{ marginLeft: 8 }} title="Files are stored locally in your browser">Offline</span>
         </div>
         <div className="topnav-actions">
           <button

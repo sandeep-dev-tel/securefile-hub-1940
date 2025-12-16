@@ -235,11 +235,13 @@ export async function listAllDirs(depthLimit = 3) {
   const build = async (startPath, depth) => {
     if (depth < 0) return [];
     const children = await listByParentPath(startPath);
-    const dirs = children.filter((e) => e.type === "dir");
+    const safeChildren = Array.isArray(children) ? children : [];
+    const dirs = safeChildren.filter((e) => e && e.type === "dir");
     const result = [];
     for (const d of dirs) {
       const kids = await build(d.path, depth - 1);
-      result.push({ name: d.name, path: d.path, type: "dir", children: kids });
+      // Ensure children is always an array for UI consumers
+      result.push({ name: d.name, path: d.path, type: "dir", children: Array.isArray(kids) ? kids : [] });
     }
     return result;
   };

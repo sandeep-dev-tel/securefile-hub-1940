@@ -68,7 +68,8 @@ export default function FileList() {
   };
 
   const toggleSelect = (name) => {
-    const next = new Set(state.state?.selected || state.selected);
+    const base = state && state.selected instanceof Set ? state.selected : new Set();
+    const next = new Set(base);
     if (next.has(name)) next.delete(name);
     else next.add(name);
     actions.setSelected(next);

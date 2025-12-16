@@ -3,7 +3,9 @@ import { useApp } from "../context/AppContext";
 
 function TreeNode({ node, onOpen }) {
   const [open, setOpen] = useState(true);
-  const isDir = node.type === "dir";
+  const isDir = node?.type === "dir";
+  // Always coerce children to an array to avoid calling .map on undefined/null
+  const children = Array.isArray(node?.children) ? node.children : [];
   return (
     <li>
       <div
@@ -12,17 +14,17 @@ function TreeNode({ node, onOpen }) {
         onClick={() => {
           if (isDir) {
             setOpen((v) => !v);
-            onOpen(node.path);
+            if (node?.path) onOpen(node.path);
           }
         }}
-        title={node.path}
+        title={node?.path || "/"}
       >
         <span>{isDir ? (open ? "📂" : "📁") : "📄"}</span>
-        <span>{node.name}</span>
+        <span>{node?.name ?? "/"}</span>
       </div>
-      {isDir && open && node.children?.length > 0 && (
+      {isDir && open && children.length > 0 && (
         <ul className="children">
-          {node.children.map((child) => (
+          {children.map((child) => (
             <TreeNode key={child.path} node={child} onOpen={onOpen} />
           ))}
         </ul>

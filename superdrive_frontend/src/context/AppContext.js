@@ -24,11 +24,11 @@ function reducer(state, action) {
     case "SET_PATH":
       return { ...state, currentPath: action.payload };
     case "SET_ENTRIES":
-      return { ...state, entries: action.payload };
+      return { ...state, entries: Array.isArray(action.payload) ? action.payload : [] };
     case "SET_TREE":
-      return { ...state, tree: action.payload };
+      return { ...state, tree: Array.isArray(action.payload) ? action.payload : [] };
     case "SELECT":
-      return { ...state, selected: new Set(action.payload) };
+      return { ...state, selected: new Set(action.payload || []) };
     default:
       return state;
   }

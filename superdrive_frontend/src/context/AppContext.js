@@ -177,10 +177,39 @@ export function AppProvider({ children, bus }) {
         }
       },
       async upload(fileList) {
+        // Normalize and defensively guard against empty selections to avoid hanging UI
+        // Accepts: Array<File>, FileList, or any iterable of files
+        const arr = (() => {
+          if (!fileList) return [];
+          // FileList is array-like but not an array
+          if (typeof fileList.length === "number" && !Array.isArray(fileList)) {
+            try {
+              return Array.from(fileList);
+            } catch {
+              // fallback: manual copy
+              const tmp = [];
+              for (let i = 0; i < fileList.length; i++) tmp.push(fileList[i]);
+              return tmp;
+            }
+          }
+          try {
+            return Array.from(fileList);
+          } catch {
+            return [];
+          }
+        })();
+
+        if (!arr.length) {
+          // Graceful no-op with a helper toast, do not toggle loading
+          notify("No files selected", "success");
+          return;
+        }
+
         setLoading(true);
         try {
-          await files.upload(state.currentPath, fileList);
-          notify(`Uploaded ${fileList.length} file(s)`);
+          await files.upload(state.currentPath, arr);
+          notify(`Uploaded ${arr.length} file(s)`);
+          // Refresh current path to show newly uploaded files immediately
           await actions.refresh();
         } catch (e) {
           setError(e.message || "Upload failed");

@@ -36,9 +36,16 @@ export default function FileList() {
   };
 
   const onUpload = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) actions.upload(files);
-    e.target.value = "";
+    // Read FileList synchronously and immediately clear the input
+    const list = e?.target?.files || [];
+    const files = Array.from(list || []);
+    // Clear the input before any async operations to avoid stale references
+    if (e?.target) e.target.value = "";
+    if (files.length > 0) {
+      actions.upload(files);
+    } else {
+      // no-op; AppContext.upload also guards, but we avoid calling it for clarity
+    }
   };
 
   const onDownload = (entry) => {

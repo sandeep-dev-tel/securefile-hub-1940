@@ -22,7 +22,8 @@ function log(...args) {
 }
 
 async function request(path, { method = "GET", headers = {}, body, raw = false } = {}) {
-  const url = `${BASE()}${path.startsWith("/") ? "" : "/"}${path}`;
+  const base = BASE();
+  const url = `${base}${path.startsWith("/") ? "" : "/"}${path}`;
   const options = {
     method,
     headers: {
@@ -35,22 +36,39 @@ async function request(path, { method = "GET", headers = {}, body, raw = false }
   };
   log(method, url);
 
-  const res = await fetch(url, options);
-  const contentType = res.headers.get("content-type") || "";
-  if (!res.ok) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (networkErr) {
+    // Network / CORS / DNS issues; provide a clear error
+    const err = new Error(
+      `Network error contacting API at ${url}. Check REACT_APP_API_BASE/REACT_APP_BACKEND_URL and server availability.`
+    );
+    err.cause = networkErr;
+    err.status = 0;
+    throw err;
+  }
+
+  // Guard against undefined response or headers
+  const contentType = res?.headers?.get?.("content-type") || "";
+
+  if (!res || !res.ok) {
     let detail = "";
     try {
       if (contentType.includes("application/json")) {
         const j = await res.json();
-        detail = j?.message || j?.detail || JSON.stringify(j);
-      } else {
+        // Try common fields
+        detail = j?.message || j?.detail || j?.error || (typeof j === "string" ? j : JSON.stringify(j));
+      } else if (res) {
         detail = await res.text();
       }
     } catch {
-      detail = `HTTP ${res.status}`;
+      // ignore parse errors
     }
-    const err = new Error(detail || `Request failed: ${res.status}`);
-    err.status = res.status;
+    const status = res?.status ?? 0;
+    if (!detail) detail = status ? `HTTP ${status}` : "Request failed";
+    const err = new Error(detail);
+    err.status = status;
     throw err;
   }
 

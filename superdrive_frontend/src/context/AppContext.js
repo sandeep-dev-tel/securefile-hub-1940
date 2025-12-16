@@ -98,7 +98,9 @@ export function AppProvider({ children, bus }) {
           notify("Signed in");
           await actions.refresh("/");
         } catch (e) {
-          setError(e.message || "Login failed");
+          // Provide clearer error messages to the UI
+          const message = e?.message || "Login failed";
+          setError(message);
           throw e;
         } finally {
           setLoading(false);

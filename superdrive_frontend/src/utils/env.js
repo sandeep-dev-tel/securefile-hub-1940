@@ -10,9 +10,13 @@ export function getApiBaseUrl() {
    * In monolith mode (node server.js), default is same-origin "" and the client
    * will automatically append "/api" when building request URLs.
    *
-   * You can override with:
-   * - REACT_APP_API_BASE (e.g., "https://example.com/api") which the client will use as-is
+   * Override with:
+   * - REACT_APP_API_BASE (e.g., "https://example.com/api") used as-is by client
    * - REACT_APP_BACKEND_URL (e.g., "https://example.com") and the client will append "/api"
+   *
+   * Note: User list is provided to the server (SUPERDRIVE_USERS/USERS_JSON). Frontend counterpart
+   * variable name listed in deployment manifests may be REACT_APP_SUPERDRIVE_USERS, but the Node server
+   * reads SUPERDRIVE_USERS. Ensure proper environment wiring when deploying monolith.
    */
   const base = get("REACT_APP_API_BASE") || get("REACT_APP_BACKEND_URL") || "";
   return (base || "").replace(/\/*$/, "");

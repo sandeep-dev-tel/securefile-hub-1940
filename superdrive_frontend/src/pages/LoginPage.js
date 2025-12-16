@@ -71,7 +71,11 @@ export default function LoginPage() {
           </button>
         </div>
         <div className="helper" style={{ marginTop: 12 }}>
-          Note: In monolith mode, APIs are same-origin. You can override base via REACT_APP_API_BASE if needed.
+          Notes:
+          <ul>
+            <li>In monolith mode, APIs are same-origin under /api. Override base via REACT_APP_API_BASE or REACT_APP_BACKEND_URL if remote.</li>
+            <li>Default credentials are admin/admin unless overridden on the server (SUPERDRIVE_USERS or USERS_JSON).</li>
+          </ul>
         </div>
       </form>
     </div>

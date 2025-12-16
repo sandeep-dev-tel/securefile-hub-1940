@@ -30,6 +30,7 @@ async function request(path, { method = "GET", headers = {}, body, raw = false }
       ...headers,
       ...(body && !(body instanceof FormData) ? JSON_HEADERS : {}),
       // credentials handled by cookies or token if needed
+      // For guest mode we do not add any auth header, backend uses cookie session only.
     },
     body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined,
     credentials: "include",
@@ -40,7 +41,6 @@ async function request(path, { method = "GET", headers = {}, body, raw = false }
   try {
     res = await fetch(url, options);
   } catch (networkErr) {
-    // Network / CORS / DNS issues; provide a clear error
     const err = new Error(
       `Network error contacting API at ${url}. Check REACT_APP_API_BASE/REACT_APP_BACKEND_URL and server availability.`
     );
@@ -49,7 +49,6 @@ async function request(path, { method = "GET", headers = {}, body, raw = false }
     throw err;
   }
 
-  // Guard against undefined response or headers
   const contentType = res?.headers?.get?.("content-type") || "";
 
   if (!res || !res.ok) {
@@ -57,7 +56,6 @@ async function request(path, { method = "GET", headers = {}, body, raw = false }
     try {
       if (contentType.includes("application/json")) {
         const j = await res.json();
-        // Try common fields
         detail = j?.message || j?.detail || j?.error || (typeof j === "string" ? j : JSON.stringify(j));
       } else if (res) {
         detail = await res.text();
@@ -83,21 +81,18 @@ async function request(path, { method = "GET", headers = {}, body, raw = false }
 export const AuthAPI = {
   /**
    * Login with username and password.
-   * TODO: Confirm backend path and payload shape; assumed /auth/login.
    */
   async login({ username, password }) {
     return request("/auth/login", { method: "POST", body: { username, password } });
   },
   /**
    * Logout current session.
-   * TODO: Confirm backend path.
    */
   async logout() {
     return request("/auth/logout", { method: "POST" });
   },
   /**
    * Get current user info.
-   * TODO: Confirm backend path/response.
    */
   async me() {
     return request("/auth/me", { method: "GET" });
@@ -108,7 +103,6 @@ export const AuthAPI = {
 export const FilesAPI = {
   /**
    * List files and directories under a path.
-   * TODO: Confirm backend path and response. Assumed: GET /files?path=/a/b
    */
   async list(path = "/") {
     const q = new URLSearchParams({ path });
@@ -116,49 +110,50 @@ export const FilesAPI = {
   },
   /**
    * Create a directory.
-   * TODO: Confirm backend path. Assumed: POST /dirs with { path, name }
    */
   async createDir(path, name) {
     return request("/dirs", { method: "POST", body: { path, name } });
   },
   /**
    * Rename a file or directory.
-   * TODO: Confirm backend path. Assumed: POST /files/rename { path, newName }
    */
   async rename(path, newName) {
     return request("/files/rename", { method: "POST", body: { path, newName } });
   },
   /**
    * Move a file or directory.
-   * TODO: Confirm backend path. Assumed: POST /files/move { from, to }
    */
   async move(from, to) {
     return request("/files/move", { method: "POST", body: { from, to } });
   },
   /**
    * Delete a file or directory.
-   * TODO: Confirm backend path. Assumed: POST /files/delete { path }
    */
   async remove(path) {
     return request("/files/delete", { method: "POST", body: { path } });
   },
   /**
    * Upload one or more files using multipart/form-data.
-   * TODO: Confirm backend path. Assumed: POST /files/upload with form fields: path, files[]
    */
   async upload(path, files) {
     const form = new FormData();
     form.append("path", path);
     for (const file of files) form.append("files", file);
-    // Ensure multipart/form-data with field name "files" to match multer.array("files")
     return request("/files/upload", { method: "POST", body: form });
   },
   /**
    * Download a file as a blob.
-   * TODO: Confirm backend path. Assumed: GET /files/download?path=/a.txt
    */
   async download(path) {
     const q = new URLSearchParams({ path });
     return request(`/files/download?${q.toString()}`, { method: "GET", raw: true });
   },
 };
+
+// PUBLIC_INTERFACE
+export function isGuestLoginEnabled() {
+  /** Helper to check guest login feature flag. */
+  const flags = process.env.REACT_APP_FEATURE_FLAGS || "";
+  if (!flags) return true;
+  return flags.split(",").map((s) => s.trim()).includes("guest-login");
+}

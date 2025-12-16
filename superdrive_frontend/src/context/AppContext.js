@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useMemo, useReducer, useEffect } from "react";
 import { AuthAPI, FilesAPI } from "../api/client";
 
+// Feature flag helper
+function isGuestEnabled() {
+  const flags = process.env.REACT_APP_FEATURE_FLAGS || "";
+  if (!flags) return true; // enable by default when not present
+  return flags.split(",").map((s) => s.trim()).includes("guest-login");
+}
+
 // App state and actions
 const initialState = {
   user: null,
@@ -43,6 +50,32 @@ export function useApp() {
   return ctx;
 }
 
+function persistAuth(user) {
+  try {
+    if (user) {
+      localStorage.setItem("sd_auth_user", JSON.stringify(user));
+      localStorage.setItem("sd_last_user", user.username || user.name || "");
+    } else {
+      localStorage.removeItem("sd_auth_user");
+      localStorage.removeItem("sd_last_user");
+    }
+  } catch {
+    // ignore storage unavailability
+  }
+}
+
+function restoreAuth() {
+  try {
+    const raw = localStorage.getItem("sd_auth_user");
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    if (!u || typeof u !== "object") return null;
+    return u;
+  } catch {
+    return null;
+  }
+}
+
 // PUBLIC_INTERFACE
 export function AppProvider({ children, bus }) {
   /** Provider that manages global app state, auth, and file listing. */
@@ -57,12 +90,7 @@ export function AppProvider({ children, bus }) {
   };
   const setUser = (u) => {
     dispatch({ type: "SET_USER", payload: u });
-    try {
-      if (u?.username) localStorage.setItem("sd_last_user", u.username);
-      else localStorage.removeItem("sd_last_user");
-    } catch {
-      // ignore storage issues
-    }
+    persistAuth(u);
   };
   const setPath = (p) => dispatch({ type: "SET_PATH", payload: p });
   const setEntries = (list) => dispatch({ type: "SET_ENTRIES", payload: list });
@@ -80,8 +108,14 @@ export function AppProvider({ children, bus }) {
       async init() {
         setLoading(true);
         try {
-          const me = await AuthAPI.me().catch(() => null);
-          if (me) setUser(me);
+          // Attempt restore from localStorage (guest or normal)
+          const restored = restoreAuth();
+          if (restored?.isGuest) {
+            setUser(restored);
+          } else {
+            const me = await AuthAPI.me().catch(() => null);
+            if (me) setUser(me);
+          }
           await actions.refresh();
         } catch {
           // ignore initial errors; user may need to login
@@ -98,7 +132,6 @@ export function AppProvider({ children, bus }) {
           notify("Signed in");
           await actions.refresh("/");
         } catch (e) {
-          // Provide clearer error messages to the UI
           const message = e?.message || "Login failed";
           setError(message);
           throw e;
@@ -106,11 +139,29 @@ export function AppProvider({ children, bus }) {
           setLoading(false);
         }
       },
+      // PUBLIC_INTERFACE
+      async loginAsGuest() {
+        /** Log in as a guest user and persist the session locally. */
+        if (!isGuestEnabled()) {
+          setError("Guest login is disabled.");
+          return;
+        }
+        // Create a client-side session object; role guest, but full capabilities in UI.
+        const guest = { username: "guest", role: "guest", isGuest: true };
+        setUser(guest);
+        notify("Continuing as Guest");
+        await actions.refresh("/");
+      },
       async logout() {
         setLoading(true);
         try {
-          await AuthAPI.logout();
-          notify("Signed out", "success");
+          if (state.user?.isGuest) {
+            // Client-side only logout for guest
+            notify("Signed out", "success");
+          } else {
+            await AuthAPI.logout();
+            notify("Signed out", "success");
+          }
         } finally {
           setUser(null);
           setLoading(false);
@@ -122,7 +173,6 @@ export function AppProvider({ children, bus }) {
         setLoading(true);
         try {
           const data = await FilesAPI.list(target);
-          // Expecting { entries: [...], tree: [...] }
           setEntries(data.entries || []);
           setTree(data.tree || []);
         } catch (e) {
@@ -211,7 +261,7 @@ export function AppProvider({ children, bus }) {
       setPath,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.currentPath]
+    [state.currentPath, state.user]
   );
 
   useEffect(() => {

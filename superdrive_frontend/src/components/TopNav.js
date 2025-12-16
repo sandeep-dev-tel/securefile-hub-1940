@@ -6,7 +6,8 @@ import SettingsPanel from "./SettingsPanel";
 export default function TopNav() {
   /** Top navigation bar with brand, current user, settings, and logout button. */
   const { state, actions } = useApp();
-  const userLabel = state.user?.username || state.user?.name || "Guest";
+  const isGuest = !!state.user?.isGuest;
+  const userLabel = state.user?.username || state.user?.name || (isGuest ? "Guest" : "Guest");
   const [showSettings, setShowSettings] = useState(false);
 
   return (
